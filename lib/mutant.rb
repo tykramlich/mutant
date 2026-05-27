@@ -27,10 +27,11 @@ module Warning
     'parser/source/buffer.rb:97: warning: string returned by :'
   ].freeze
 
-  def self.warn(message, *args, **kwargs)
+  def self.warn(*arguments, **keywords)
+    message = arguments.fetch(0).to_s
     return if PARSER_WARNING_PATTERNS.any? { |pattern| message.include?(pattern) }
 
-    super(message, *args, **kwargs)
+    super(*arguments, **keywords)
   end
 end
 
@@ -155,6 +156,7 @@ require 'mutant/mutator/node/nthref'
 require 'mutant/mutator/node/masgn'
 require 'mutant/mutator/node/return'
 require 'mutant/mutator/node/block'
+require 'mutant/mutator/node/numblock'
 require 'mutant/mutator/node/if'
 require 'mutant/mutator/node/case'
 require 'mutant/mutator/node/splat'

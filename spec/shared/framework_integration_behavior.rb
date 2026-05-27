@@ -13,6 +13,11 @@ RSpec.shared_examples_for 'framework integration' do
 
   around do |example|
     Bundler.with_unbundled_env do
+      unless ENV.key?('BUNDLE_PATH')
+        ENV['BUNDLE_PATH'] =
+          File.expand_path('../vendor/bundle', TestApp.root)
+      end
+
       Dir.chdir(TestApp.root) do
         Kernel.system('bundle', 'install', '--gemfile', gemfile) || fail('Bundle install failed!')
         example.run

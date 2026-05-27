@@ -5,7 +5,7 @@ module Mutant
   class WarningFilter
     include Equalizer.new(:target)
 
-    WARNING_PATTERN = /\A(?:.+):(?:\d+): warning: (?:.+)\n\z/.freeze
+    WARNING_RE = /(?:.+):(?:\d+): warning: (?:.+)/.freeze
 
     # Initialize object
     #
@@ -36,11 +36,10 @@ module Mutant
     #
     # @return [self]
     def write(message)
-      if WARNING_PATTERN.match?(message)
-        warnings << message
-      else
-        target.write(message)
-      end
+      warning, non_warning = message.split("\n", -1).partition { |line| WARNING_RE.match?(line) }
+
+      append_warnings(warning)
+      write_non_warning_lines(non_warning)
 
       self
     end
@@ -56,6 +55,18 @@ module Mutant
       filter.warnings
     ensure
       $stderr = original_stderr
+    end
+
+  private
+
+    def append_warnings(lines)
+      lines.each { |line| warnings << "#{line}\n" }
+    end
+
+    def write_non_warning_lines(lines)
+      return if lines.all?(&:empty?)
+
+      target << lines.join("\n")
     end
 
   end # WarningFilter

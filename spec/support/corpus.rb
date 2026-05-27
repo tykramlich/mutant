@@ -55,11 +55,12 @@ module MutantSpec
       def verify_mutation_coverage
         checkout
         Dir.chdir(repo_path) do
-          Bundler.with_unbundled_env do
+          with_nested_bundle_environment do
             install_mutant
+            relative = ROOT.relative_path_from(repo_path)
             system(
               %W[
-                bundle exec mutant
+                bundle exec ruby #{relative.join('bin', 'mutant')}
                 --use #{integration}
                 --include lib
                 --require #{name}
@@ -135,6 +136,24 @@ module MutantSpec
 
     private
 
+      def relax_mutant_version_constraints
+        Dir[repo_path.join('*.gemspec')].each do |gemspec_path|
+          content = File.read(gemspec_path)
+          content = content.gsub(
+            /add_development_dependency\('mutant[^']*',\s*'~> [^']*'\)/
+          ) do |match|
+            match.sub(/'~> [^']*'/, "'>= 0'")
+          end
+          if integration == 'minitest'
+            content = content.gsub(
+              /add_development_dependency\('minitest',\s*'[^']*'\)/,
+              "add_development_dependency('minitest', '>= 0')"
+            )
+          end
+          File.write(gemspec_path, content)
+        end
+      end
+
       # Count mutations and check error results against whitelist
       #
       # @param path [Pathname] path responsible for exception
@@ -191,15 +210,55 @@ module MutantSpec
       def install_mutant
         return if noinstall?
         relative = ROOT.relative_path_from(repo_path)
-        repo_path.join('Gemfile').open('a') do |file|
+        repo_path.join('Gemfile').open('w') do |file|
+          file << "# frozen_string_literal: true\n"
+          file << "source 'https://rubygems.org'\n"
+          file << "gemspec\n"
           file << "gem 'mutant', path: '#{relative}'\n"
-          file << "gem 'mutant-rspec', path: '#{relative}'\n"
-          file << "gem 'mutant-minitest', path: '#{relative}'\n"
+          case integration
+          when 'minitest'
+            file << "gem 'mutant-minitest', path: '#{relative}'\n"
+          when 'rspec'
+            file << "gem 'mutant-rspec', path: '#{relative}'\n"
+          end
           file << "eval_gemfile File.expand_path('#{relative.join('Gemfile.shared')}')\n"
         end
+        relax_mutant_version_constraints
         lockfile = repo_path.join('Gemfile.lock')
         lockfile.delete if lockfile.exist?
-        system(%w[bundle])
+        bundle_dir = repo_path.join('.bundle')
+        bundle_dir.mkdir unless bundle_dir.directory?
+        bundle_dir.join('config').write(<<~YAML)
+          ---
+          BUNDLE_PATH: "#{ROOT.join('vendor', 'bundle')}"
+        YAML
+        system(%w[bundle install])
+      end
+
+      # Run nested bundler commands without leaking the parent Gemfile while
+      # preserving the bundle path selected by the outer process.
+      #
+      # @return [Object]
+      def with_nested_bundle_environment
+        preserved = bundler_environment_overrides
+
+        Bundler.with_unbundled_env do
+          preserved.each { |key, value| ENV[key] = value }
+          yield
+        ensure
+          preserved.each_key { |key| ENV.delete(key) }
+        end
+      end
+
+      # Bundler environment variables needed by nested bundle commands.
+      #
+      # @return [Hash<String, String>]
+      def bundler_environment_overrides
+        path = Bundler.settings[:path]
+        value = ENV['BUNDLE_PATH'] || path && File.expand_path(path, ROOT)
+        result = {}
+        result['BUNDLE_PATH'] = value if value
+        result
       end
 
       # The effective ruby file paths
@@ -271,12 +330,18 @@ module MutantSpec
       #
       # rubocop:disable GuardClause - guard clause without else does not make sense
       def system(arguments)
-        return if Kernel.system(*arguments)
+        output = IO.popen(arguments, err: %i[child out], &:read)
+        status = Process.last_status || $CHILD_STATUS
+        return if status&.success?
 
         if block_given?
           yield
         else
-          fail "System command failed!: #{arguments.join(' ')}"
+          raise(
+            "System command failed!: #{arguments.join(' ')}\n" \
+            "Status: #{status.inspect}\n" \
+            "Output:\n#{output}"
+          )
         end
       end
 

@@ -111,22 +111,22 @@ RSpec.describe Mutant::Subject::Method::Instance::Memoized do
         Mutant::Mutation::Neutral.new(
           object,
           s(:begin,
-            s(:def, :foo, s(:args)), s(:send, nil, :memoize, s(:args, s(:sym, :foo))))
+            s(:def, :foo, s(:args)), s(:send, nil, :memoize, s(:sym, :foo)))
         ),
         Mutant::Mutation::Evil.new(
           object,
           s(:begin,
-            s(:def, :foo, s(:args), s(:send, nil, :raise)), s(:send, nil, :memoize, s(:args, s(:sym, :foo))))
+            s(:def, :foo, s(:args), s(:send, nil, :raise)), s(:send, nil, :memoize, s(:sym, :foo)))
         ),
         Mutant::Mutation::Evil.new(
           object,
           s(:begin,
-            s(:def, :foo, s(:args), s(:zsuper)), s(:send, nil, :memoize, s(:args, s(:sym, :foo))))
+            s(:def, :foo, s(:args), s(:zsuper)), s(:send, nil, :memoize, s(:sym, :foo)))
         ),
         Mutant::Mutation::Evil.new(
           object,
           s(:begin,
-            s(:def, :foo, s(:args), nil), s(:send, nil, :memoize, s(:args, s(:sym, :foo))))
+            s(:def, :foo, s(:args), nil), s(:send, nil, :memoize, s(:sym, :foo)))
         )
       ]
     end
@@ -137,6 +137,6 @@ RSpec.describe Mutant::Subject::Method::Instance::Memoized do
   describe '#source' do
     subject { object.source }
 
-    it { should eql("def foo\nend\nmemoize(:foo)") }
+    it { should eql("def foo\nend\nmemoize(:foo)\n") }
   end
 end

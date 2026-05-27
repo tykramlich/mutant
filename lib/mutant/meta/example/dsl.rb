@@ -107,10 +107,10 @@ module Mutant
           end
         end
 
-        def normalize(node)
+        def normalize(node, parent_type = nil)
           if node.is_a?(::Parser::AST::Node)
-            children = node.children.map { |child| normalize(child) }
-            if node.type == :begin && children.one?
+            children = node.children.map { |child| normalize(child, node.type) }
+            if node.type == :begin && children.one? && !%i[dstr dsym regexp].include?(parent_type)
               children.first
             else
               node.updated(nil, children)
