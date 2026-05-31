@@ -25,6 +25,7 @@ module Mutant
       include Adamantium, Anima.new(:config, :from, :to)
 
       HEAD = 'HEAD'
+      LINE_RANGE_MISSING = /\Afatal: file .+ has only \d+ lines\s*\z/.freeze
 
       # Test if diff changes file at line range
       #
@@ -40,13 +41,14 @@ module Mutant
 
         command = %W[
           git log
-          #{from}...#{to}
+          #{from}..#{to}
           --ignore-all-space
           -L #{line_range.begin},#{line_range.end}:#{path}
         ]
 
-        stdout, status = config.open3.capture2(*command, binmode: true)
+        stdout, stderr, status = config.open3.capture3(*command, binmode: true)
 
+        return true if stderr.match?(LINE_RANGE_MISSING)
         fail RepositoryError, "Command #{command} failed!" unless status.success?
 
         !stdout.empty?
