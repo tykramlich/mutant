@@ -206,3 +206,8 @@ License
 -------
 
 See LICENSE file.
+
+Licensing
+---------
+
+viamin/mutant is MIT-licensed. There is no commercial gate, no license key, and no usage restriction. Use on open-source or proprietary code freely under the terms of the LICENSE file.

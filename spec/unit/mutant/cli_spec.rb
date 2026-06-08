@@ -3,6 +3,132 @@
 RSpec.describe Mutant::CLI do
   let(:object) { described_class }
 
+  describe Mutant::CLIArgumentSanitizer, mutant_expression: 'Mutant::CLIArgumentSanitizer*' do
+    subject(:sanitize_arguments) { described_class.call($stderr, arguments) }
+
+    let(:arguments) { original_arguments.dup }
+
+    context 'when usage is passed as separate option and value' do
+      let(:original_arguments) { %w[--usage opensource TestApp*] }
+
+      it 'removes both arguments and warns' do
+        expect($stderr).to receive(:puts).with(described_class::WARNING)
+
+        expect(sanitize_arguments).to eql(%w[TestApp*])
+      end
+    end
+
+    context 'when usage is passed as inline assignment' do
+      let(:original_arguments) { %w[--usage=commercial TestApp*] }
+
+      it 'removes the option and warns' do
+        expect($stderr).to receive(:puts).with(described_class::WARNING)
+
+        expect(sanitize_arguments).to eql(%w[TestApp*])
+      end
+    end
+
+    context 'when inline usage is followed by a known value' do
+      let(:original_arguments) { %w[--usage=commercial opensource TestApp*] }
+
+      it 'removes only the inline flag and warns' do
+        expect($stderr).to receive(:puts).with(described_class::WARNING)
+
+        expect(sanitize_arguments).to eql(%w[opensource TestApp*])
+      end
+    end
+
+    context 'when usage commercial is passed as separate option and value' do
+      let(:original_arguments) { %w[--usage commercial TestApp*] }
+
+      it 'removes both arguments and warns' do
+        expect($stderr).to receive(:puts).with(described_class::WARNING)
+
+        expect(sanitize_arguments).to eql(%w[TestApp*])
+      end
+    end
+
+    context 'when usage is passed with another value' do
+      let(:original_arguments) { %w[--usage proprietary TestApp*] }
+
+      it 'removes only the flag and warns' do
+        expect($stderr).to receive(:puts).with(described_class::WARNING)
+
+        expect(sanitize_arguments).to eql(%w[proprietary TestApp*])
+      end
+    end
+
+    context 'when usage is passed before another option' do
+      let(:original_arguments) { %w[--usage --help] }
+
+      it 'removes only the usage flag and warns' do
+        expect($stderr).to receive(:puts).with(described_class::WARNING)
+
+        expect(sanitize_arguments).to eql(%w[--help])
+      end
+    end
+
+    context 'when usage is passed multiple times' do
+      let(:original_arguments) { %w[--usage opensource --usage=commercial TestApp*] }
+
+      it 'removes every usage flag and warns once' do
+        expect($stderr).to receive(:puts).with(described_class::WARNING).once
+
+        expect(sanitize_arguments).to eql(%w[TestApp*])
+      end
+    end
+
+    context 'when usage is absent' do
+      let(:original_arguments) { %w[TestApp*] }
+
+      it 'returns arguments unchanged without warning' do
+        expect($stderr).not_to receive(:puts)
+
+        expect(sanitize_arguments).to eql(%w[TestApp*])
+      end
+    end
+
+    context 'when usage with a known value appears after other arguments' do
+      let(:original_arguments) { %w[--include lib --usage opensource TestApp*] }
+
+      it 'removes the flag and its value regardless of position' do
+        expect($stderr).to receive(:puts).with(described_class::WARNING)
+
+        expect(sanitize_arguments).to eql(%w[--include lib TestApp*])
+      end
+    end
+
+    context 'when usage is the last argument' do
+      let(:original_arguments) { %w[TestApp* --usage] }
+
+      it 'removes only the flag and warns' do
+        expect($stderr).to receive(:puts).with(described_class::WARNING)
+
+        expect(sanitize_arguments).to eql(%w[TestApp*])
+      end
+    end
+
+    context 'when usage flag is a non-interned string' do
+      let(:original_arguments) { [String.new('--usage'), 'opensource', 'TestApp*'] }
+
+      it 'removes both arguments and warns' do
+        expect($stderr).to receive(:puts).with(described_class::WARNING)
+
+        expect(sanitize_arguments).to eql(%w[TestApp*])
+      end
+    end
+
+    context 'when an argument resembles but does not match usage' do
+      let(:original_arguments) { %w[--usageother TestApp*] }
+
+      it 'returns arguments unchanged without warning' do
+        expect($stderr).not_to receive(:puts)
+
+        expect(sanitize_arguments).to eql(%w[--usageother TestApp*])
+      end
+    end
+  end
+
   shared_examples_for 'an invalid cli run' do
     it 'raises error' do
       expect do
@@ -62,7 +188,7 @@ RSpec.describe Mutant::CLI do
     end
   end
 
-  describe '.new' do
+  describe '.new', mutant_expression: 'Mutant::CLI#parse' do
     subject { object.new(arguments) }
 
     let(:expected_integration)    { Mutant::Integration::Null        }
@@ -74,23 +200,23 @@ RSpec.describe Mutant::CLI do
         .with(match_expressions: expressions.map(&method(:parse_expression)))
     end
     let(:help_message) do
-      <<~MESSAGE
-        usage: mutant [options] MATCH_EXPRESSION ...
-        Environment:
-                --zombie                     Run mutant zombified
-            -I, --include DIRECTORY          Add DIRECTORY to $LOAD_PATH
-            -r, --require NAME               Require file with NAME
-            -j, --jobs NUMBER                Number of kill jobs. Defaults to MUTANT_JOBS or 1.
-
-        Options:
-                --use INTEGRATION            Use INTEGRATION to kill mutations
-                --include-subject EXPRESSION Add EXPRESSION to the configured subject matcher list
-                --ignore-subject EXPRESSION  Ignore subjects that match EXPRESSION as prefix
-                --since REVISION             Only select subjects touched since REVISION
-                --fail-fast                  Fail fast
-                --version                    Print mutants version
-            -h, --help                       Show this message
-      MESSAGE
+      [
+        'usage: mutant [options] MATCH_EXPRESSION ...',
+        'Environment:',
+        '        --zombie                     Run mutant zombified',
+        '    -I, --include DIRECTORY          Add DIRECTORY to $LOAD_PATH',
+        '    -r, --require NAME               Require file with NAME',
+        '    -j, --jobs NUMBER                Number of kill jobs. Defaults to MUTANT_JOBS or 1.',
+        '',
+        'Options:',
+        '        --use INTEGRATION            Use INTEGRATION to kill mutations',
+        '        --include-subject EXPRESSION Add EXPRESSION to the configured subject matcher list',
+        '        --ignore-subject EXPRESSION  Ignore subjects that match EXPRESSION as prefix',
+        '        --since REVISION             Only select subjects touched since REVISION',
+        '        --fail-fast                  Fail fast',
+        '        --version                    Print mutants version',
+        '    -h, --help                       Show this message'
+      ].join("\n") + "\n"
     end
 
     let(:flags)       { []           }
@@ -115,6 +241,7 @@ RSpec.describe Mutant::CLI do
       let(:flags) { %w[--help] }
 
       before do
+        expect(help_message).not_to include('--usage')
         expect($stdout).to receive(:puts).with(expected_message)
         expect(Kernel).to receive(:exit)
       end
@@ -178,6 +305,63 @@ RSpec.describe Mutant::CLI do
             'Could not load integration "other" (you may want to try installing the gem mutant-other)'
           )
         end
+      end
+    end
+
+    context 'with usage flag' do
+      before do
+        expect($stderr).to receive(:puts).with(Mutant::CLIArgumentSanitizer::WARNING)
+      end
+
+      context 'when passed as separate option and value' do
+        let(:flags) { %w[--usage opensource] }
+
+        it_should_behave_like 'a cli parser'
+      end
+
+      context 'when passed as inline option assignment' do
+        let(:flags) { %w[--usage=commercial] }
+
+        it_should_behave_like 'a cli parser'
+      end
+
+      context 'when passed commercial as separate option and value' do
+        let(:flags) { %w[--usage commercial] }
+
+        it_should_behave_like 'a cli parser'
+      end
+
+      context 'when passed with another value' do
+        let(:flags) { %w[--usage proprietary] }
+
+        let(:expected_matcher_config) do
+          Mutant::Matcher::Config::DEFAULT.with(
+            match_expressions: [
+              parse_expression('proprietary'),
+              parse_expression('TestApp*')
+            ]
+          )
+        end
+
+        it_should_behave_like 'a cli parser'
+      end
+
+      context 'when passed before another option' do
+        let(:flags) { %w[--usage --help] }
+
+        before do
+          expect(help_message).not_to include('--usage')
+          expect($stdout).to receive(:puts).with(help_message)
+          expect(Kernel).to receive(:exit)
+        end
+
+        it_should_behave_like 'a cli parser'
+      end
+
+      context 'when passed before a match expression' do
+        let(:flags) { %w[--usage] }
+
+        it_should_behave_like 'a cli parser'
       end
     end
 
