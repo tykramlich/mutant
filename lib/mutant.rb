@@ -205,6 +205,10 @@ require 'mutant/config/coverage_criteria'
 require 'mutant/config/loader'
 require 'mutant/config/loader/node_reader'
 require 'mutant/cli'
+require 'mutant/cli/help'
+require 'mutant/cli/options'
+require 'mutant/cli/session'
+require 'mutant/cli/subcommands'
 require 'mutant/color'
 require 'mutant/diff'
 require 'mutant/runner'
@@ -271,4 +275,8 @@ module Mutant
       zombie:             false
     )
   end # Config
+
+  class CLI
+    include CLI::Subcommands, CLI::Help, CLI::Options, CLI::Session
+  end
 end # Mutant
