@@ -48,6 +48,7 @@ module Mutant
           add_matcher(:ignore_expressions, config.expression_parser.(pattern))
         end
         opts.on('--since REVISION', 'Only select subjects touched since REVISION') do |revision|
+          with(since_revision: revision)
           add_matcher(
             :subject_filters,
             Repository::SubjectFilter.new(
@@ -59,6 +60,7 @@ module Mutant
             )
           )
         end
+        opts.on('--results-dir DIR', 'Write YAML results to DIR') { |dir| with(results_dir: config.pathname.new(dir)) }
       end
 
       def add_debug_options(opts)
