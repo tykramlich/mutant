@@ -26,7 +26,9 @@ module Mutant
     # @return [undefined]
     def initialize(*)
       super
-      @includes = %r{\A#{Regexp.union(includes)}(?:/.*)?\z}
+      includes_pattern = ::Regexp.union(includes).source
+
+      @includes = ::Regexp.new('\\A(?:' + includes_pattern + ')(?:/.*)?\\z')
       @zombified = Set.new
     end
 
@@ -57,7 +59,7 @@ module Mutant
     #
     # @param [String]
     def include?(logical_name)
-      !@zombified.include?(logical_name) && includes =~ logical_name
+      !@zombified.include?(logical_name) && !!(includes =~ logical_name)
     end
 
     # Require file in zombie namespace
