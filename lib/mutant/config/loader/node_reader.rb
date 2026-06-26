@@ -71,8 +71,16 @@ module Mutant
           "#{path}:#{node.start_line + 1}"
         end
 
+        QUOTED_STYLES = [
+          Psych::Nodes::Scalar::SINGLE_QUOTED,
+          Psych::Nodes::Scalar::DOUBLE_QUOTED,
+          Psych::Nodes::Scalar::LITERAL,
+          Psych::Nodes::Scalar::FOLDED
+        ].freeze
+        private_constant :QUOTED_STYLES
+
         def to_ruby(node)
-          return node.value if node.quoted
+          return node.value if QUOTED_STYLES.include?(node.style)
 
           raw = node.value
 
