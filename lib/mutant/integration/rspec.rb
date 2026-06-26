@@ -10,7 +10,7 @@ module Mutant
     class Rspec < self
 
       EXIT_SUCCESS         = 0
-      CLI_OPTIONS          = IceNine.deep_freeze(%w[spec --fail-fast])
+      CLI_OPTIONS          = IceNine.deep_freeze(%w[spec])
 
       private_constant(*constants(false))
 
