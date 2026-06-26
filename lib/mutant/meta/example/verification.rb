@@ -62,8 +62,10 @@ module Mutant
         # @return [Enumerable<Mutation>]
         def invalid_syntax
           mutations.reject do |mutation|
-            Mutant::PARSER_CLASS.parse(mutation.source)
-          rescue ::Parser::SyntaxError # rubocop:disable Lint/HandleExceptions
+            node = Mutant::PARSER_CLASS.parse(mutation.source)
+            node && node.type != :missing
+          rescue ::Parser::SyntaxError
+            false
           end
         end
         memoize :invalid_syntax

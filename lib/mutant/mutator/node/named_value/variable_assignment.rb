@@ -18,7 +18,7 @@ module Mutant
           }
 
           MAP = IceNine.deep_freeze(
-            Hash[map.map { |type, prefix| [type, [prefix, /^#{::Regexp.escape(prefix)}/]] }]
+            map.map { |type, prefix| [type, [prefix, /^#{::Regexp.escape(prefix)}/]] }.to_h
           )
 
           handle(*MAP.keys)

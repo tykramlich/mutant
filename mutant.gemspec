@@ -11,7 +11,7 @@ Gem::Specification.new do |gem|
   gem.summary     = 'Mutation testing tool for ruby under MRI and Rubinius'
   gem.homepage    = 'https://github.com/mbj/mutant'
   gem.license     = 'MIT'
-  gem.required_ruby_version = '>= 3.3', '< 4.0'
+  gem.required_ruby_version = '>= 3.3', '< 5'
 
   gem.require_paths = %w[lib]
 
@@ -32,7 +32,7 @@ Gem::Specification.new do |gem|
   gem.add_runtime_dependency('ice_nine',      '~> 0.11.2')
   gem.add_runtime_dependency('memoizable',    '~> 0.4.2')
   gem.add_runtime_dependency('morpher',       '~> 0.4.2')
-  gem.add_runtime_dependency('parser',        '~> 3.3.6')
+  gem.add_runtime_dependency('prism',          '>= 1.0')
   gem.add_runtime_dependency('procto',        '~> 0.0.3')
   gem.add_runtime_dependency('racc',          '~> 1.8')
   gem.add_runtime_dependency('regexp_parser', '~> 2.10')

@@ -13,9 +13,8 @@ require 'ice_nine'
 require 'morpher'
 require 'open3'
 require 'optparse'
-require 'parser'
-require 'parser/ruby33'
-require 'parser/ruby34'
+require 'prism'
+require 'prism/translation/parser'
 require 'pathname'
 require 'psych'
 require 'procto'
@@ -24,19 +23,6 @@ require 'set'
 require 'stringio'
 require 'mutant/regexp_parser_compat'
 
-module Warning
-  PARSER_WARNING_PATTERNS = [
-    'parser/current is loading',
-    'parser/source/buffer.rb:97: warning: string returned by :'
-  ].freeze
-
-  def self.warn(*arguments, **keywords)
-    message = arguments.fetch(0).to_s
-    return if PARSER_WARNING_PATTERNS.any? { |pattern| message.include?(pattern) }
-
-    super(*arguments, **keywords)
-  end
-end
 
 require 'yaml'
 require 'unparser'
@@ -53,12 +39,7 @@ module Mutant
   EMPTY_ARRAY    = [].freeze
   EMPTY_HASH     = {}.freeze
   SCOPE_OPERATOR = '::'
-  parser_class_name = "Ruby#{RUBY_VERSION.split('.').first(2).join}"
-  PARSER_CLASS      = if Parser.const_defined?(parser_class_name, false)
-                        Parser.const_get(parser_class_name, false)
-                      else
-                        Parser::Ruby34
-                      end
+  PARSER_CLASS   = Prism::Translation::Parser
 
   # Test if CI is detected via environment
   #

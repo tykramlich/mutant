@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-require "parser/ruby#{RUBY_VERSION[/\A\d+\.\d+/].delete('.')}"
+require 'prism'
+require 'prism/translation/parser'
 require 'rspec/core'
 
 module Mutant
@@ -348,7 +349,7 @@ module Mutant
         end
 
         def ruby_parser
-          @ruby_parser ||= ::Parser.const_get("Ruby#{RUBY_VERSION[/\A\d+\.\d+/].delete('.')}").new
+          @ruby_parser ||= ::Prism::Translation::Parser.new
         end
       end
 
